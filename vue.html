@@ -1,0 +1,212 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Lue like Vue</title>
+    <style>
+      .this_is_true{
+        border: 1px solid red;
+        height: 30px;
+        display: inline-block;
+        border-radius: 4px;
+      }
+      .this_is_false{
+        border: 1px solid black;
+        height: 30px;
+        width: 30px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="lue">
+      <div v-bind:class="classObject">这是text: {{text}}</div>
+      <input v-model="text" />
+      <textarea v-model="textarea"></textarea>
+      <button type="button" v-click="clickButton($event, 'qiujie', textarea)">点我</button>
+    </div>
+
+    <script type="text/javascript">
+    function Lue(options) {
+      this._init(options)
+    }
+    Lue.prototype = {
+      _init(options) {
+        this.$el = document.querySelector(options.el)
+        this.$data = options.data
+        this.$methods = options.methods
+
+        this._binding = {}
+        this._parseData(this.$data)
+
+        this._compile(this.$el)
+      },
+      _parseData(obj) {
+        let value = null
+        for(let [key, val] of Object.entries(obj)){
+          if(obj.hasOwnProperty(key)){
+            this._binding[key] = {
+              _directives: []
+            }
+            if(typeof val === 'object')
+              this._parseData(val)
+            this.convert(key, val)
+          }
+        }
+      },
+      convert(key, val) {
+        let binding = this._binding[key]
+        Object.defineProperty(this.$data, key, {
+          configurable: true,
+          enumrable: true,
+          get: () => {
+            return val
+          },
+          set: (newVal) => {
+            if(newVal !== val) {
+              val = newVal
+
+              binding._directives.forEach(function(item){
+                item._update()
+              })
+            }
+          }
+        })
+      },
+      _compile(root) {
+        let self = this
+        let nodes = root.children
+        for(let node of nodes) {
+          if(node.children.length)
+            this._compile(node)
+          for(let i = 0; i < node.attributes.length; i++) {
+            let attribute = node.attributes[i]
+            let attributeName = attribute.name
+            let actualAttrVal = attribute.value
+            let actualAttrName = null
+
+            if(/v-bind:/.exec(attributeName)) {
+              actualAttrName = attributeName.replace(/v-bind:/, '')
+              node.removeAttribute(attribute.name)
+              if(/^['|"].*['|"]$/.exec(actualAttrVal)){
+                node.setAttribute(actualAttrName, actualAttrVal.replace(/^['|"](.*)['|"]$/, "$1"))
+              } else {
+                switch(typeof this.$data[actualAttrVal]){
+                  case 'object':
+                    for(let [k, v] of Object.entries(this.$data[actualAttrVal])) {
+                        if(v === true){
+                          node.setAttribute(actualAttrName, k)
+                        }
+                    }
+                  case 'boolean':
+                    if(this.$data[actualAttrVal] === true) {
+                      node.setAttribute(actualAttrName, this.$data[actualAttrVal])
+                    }
+                }
+              }
+            }
+
+            if(attributeName === 'v-model' && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA')) {
+              node.addEventListener('input', (function(idx) {
+                let attrVal = node.getAttribute("v-model")
+                let attrName = 'value'
+                self._binding[attrVal]._directives.push(new Directives(
+                  node.tagName,
+                  node,
+                  self,
+                  attrVal,
+                  attrName
+                ))
+                return function() {
+                  self.$data[attrVal] = node[attrName]
+                }
+              })(i))
+            }
+
+            if(node.innerText) {
+              if(/{{(.*)}}/.exec(node.innerText)) {
+                node.innerText = node.innerText.replace(/{{(.*)}}/, this.$data[RegExp.$1])
+                self._binding[RegExp.$1]._directives.push(new Directives(
+                  node.tagName,
+                  node,
+                  self,
+                  RegExp.$1,
+                  'innerText'
+                ))
+              }
+            }
+
+            if(attributeName === 'v-click') {
+              let reg = /\(.*\)/.exec(actualAttrVal)
+              let methodName = null
+              let methodArg = null
+
+              if(reg) {
+                methodName = actualAttrVal.replace(/\(.*\)/, '')
+                methodArg = reg[0].replace(/[\(|\)]/g, '').split(',')
+              } else {
+                methodName = actualAttrVal
+                methodArg = []
+              }
+              
+              node.addEventListener('click', (e) => {
+                let _methodArg = Object.assign([], methodArg)
+                if(_methodArg.length) {
+                  for(let [idx, arg] of _methodArg.entries()) {
+                    arg = arg.trim()
+                    if(/["(.*)"|'(.*)']/.test(arg)) {
+                      arg = arg.replace(/["(.*)"|'(.*)']/g, RegExp.$1)
+                    } else if(arg !== '$event') {
+                      arg = this.$data[arg]
+                    } else if(arg === '$event') {
+                      arg = e
+                    }
+                    _methodArg[idx] = arg
+                  }
+                } else {
+                  _methodArg = _methodArg.unshift(e)
+                }
+                return this.$methods[methodName].apply(this, _methodArg)
+              })
+            }
+          }
+        }
+      }
+    }
+    
+    function Directives(name, el, vm, exp, attr) {
+      this.name = name
+      this.el = el
+      this.vm = vm
+      this.exp = exp
+      this.attr = attr
+
+      this._update()
+    }
+    Directives.prototype = {
+      _update(){
+        this.el[this.attr] = this.vm.$data[this.exp]
+        //
+      }
+    }
+
+
+    let lue = new Lue({
+      el: "#lue",
+      data: {
+        classObject: {
+          this_is_true: true,
+          this_is_false: false
+        },
+        text: "hello world",
+        textarea: "this is textarea"
+      },
+      methods: {
+        clickButton() {
+          console.log(arguments)
+        }
+      }
+    })
+    </script>
+  </body>
+</html>

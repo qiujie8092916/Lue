@@ -3,13 +3,15 @@ const lue = new Lue({  //eslint-disable-line
   name: 'App',
   el: '#app',
   render (h) {
-    this.__h__('div', {
-      id: 'app'
-    }, [
-      this.__h__('span', {}, [
-        this.__toString__(this.text)
-      ])
-    ])
+    // return h('div', {
+    //   id: 'app'
+    // }, [
+    //   h('span', {}, [this.text])
+    // ])
+    let a = this.__h__('span', {
+      id: 'qiujie'
+    }, [this.text])
+    console.log(a)
   },
   data: {
     classObject: {

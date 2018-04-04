@@ -10,8 +10,8 @@ class Lue {
     this.$data = options.data
     this._proxy() // proy this.some = this.$data.some
     this._observer()
-    // this._update()
-    console.log(this._update())
+    let vnode = this._update()
+    console.log(JSON.stringify(vnode, null, 2))
   }
   _observer (cb) {
     Object.keys(this.$data).forEach(key => this._convert(key, this.$data[key]))
@@ -33,20 +33,24 @@ class Lue {
     return this._render.apply(this)
   }
   _render () {
-    return _.get(this).render.apply(this)
+    return _.get(this).render ? _.get(this).render.call(this, this.__h__) : undefined
   }
-  __h__ (tag, attr, children) {
-    // let self = this
-    return new VNode(tag, attr, children.forEach((child) => {
-      if (typeof child === 'string') {
-        // self
-      } else {
-        // return
-      }
-    }))
+  __h__ (...args) {
+    let children = args.pop()
+    if (Array.isArray(children)) {
+      /* return  */children.forEach(child => {
+        if (typeof child === 'string') {
+          return this.__h__(undefined, undefined, undefined, child)
+        } else {
+          return this.__h__(...args, child)
+        }
+      })
+    } else {
+      return new VNode(...args, children)
+    }
   }
-  __toString__ () {
-
+  __toString__ (val) {
+    return val === null ? '' : typeof val === 'object' ? JSON.stringify(val, null, 2) : String(val)
   }
   _proxy () {
     Object.keys(this.$data).forEach(key => {

@@ -11,7 +11,7 @@ class Lue {
     this._proxy() // proy this.some = this.$data.some
     this._observer()
     let vnode = this._update()
-    console.log(JSON.stringify(vnode, null, 2))
+    console.log(vnode)
   }
   _observer (cb) {
     Object.keys(this.$data).forEach(key => this._convert(key, this.$data[key]))
@@ -35,18 +35,15 @@ class Lue {
   _render () {
     return _.get(this).render ? _.get(this).render.call(this, this.__h__) : undefined
   }
-  __h__ (...args) {
-    let children = args.pop()
+  __h__ (tag, attr, children) {
     if (Array.isArray(children)) {
-      /* return  */children.forEach(child => {
+      return new VNode(tag, attr, undefined, children.map(child => {
         if (typeof child === 'string') {
-          return this.__h__(undefined, undefined, undefined, child)
+          return new VNode(undefined, undefined, child)
         } else {
-          return this.__h__(...args, child)
+          return child
         }
-      })
-    } else {
-      return new VNode(...args, children)
+      }))
     }
   }
   __toString__ (val) {

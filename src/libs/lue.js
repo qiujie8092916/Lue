@@ -1,4 +1,5 @@
 import VNode from './vnode'
+import Dep from './dependency'
 
 let _ = new WeakMap()
 
@@ -10,27 +11,39 @@ class Lue {
     this.$data = options.data
     this._proxy() // proy this.some = this.$data.some
     this._observer()
-    let vnode = this._update()
-    console.log(vnode)
+    window.vnode = this._watch(this._render, this._update)
   }
   _observer (cb) {
     Object.keys(this.$data).forEach(key => this._convert(key, this.$data[key]))
   }
   _convert (key, val) {
+    const dep = new Dep()
     Object.defineProperty(this.$data, key, {
       configurable: true,
       enumerable: true,
-      get: () => val,
-      set: (newVal) => {
-        if (newVal !== val) {
-          val = newVal
+      get: () => {
+        if (Dep.target) {
+          dep.add(Dep.target)
         }
-        this._update()
+        return val
+      },
+      set: (newVal) => {
+        if (newVal === val) {
+          return
+        }
+        val = newVal
+        dep.notify(this)
       }
     })
   }
+  _watch (exp, cb) {
+    Dep.target = cb
+    return exp.apply(this)
+  }
   _update () {
-    return this._render.apply(this)
+    let vnode = this._render.apply(this)
+    console.log(vnode)
+    return vnode
   }
   _render () {
     return _.get(this).render ? _.get(this).render.call(this, this.__h__) : undefined
@@ -64,5 +77,5 @@ class Lue {
     })
   }
 }
-
+window.Dep = Dep
 export default Lue

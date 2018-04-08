@@ -3,11 +3,11 @@ const lue = new Lue({  //eslint-disable-line
   name: 'App',
   el: '#app',
   render (h) {
-    return this.__h__('div', {
+    return h('div', {
       id: 'app'
     }, [
       'I am div',
-      this.__h__('span', {}, [this.text])
+      h('span', {}, [this.text])
     ])
   },
   data: {
@@ -24,9 +24,9 @@ const lue = new Lue({  //eslint-disable-line
     }
   }
 })
-// setTimeout(function () {
-//   lue.text = '你好世界'
-// }, 3000)
+setTimeout(function () {
+  lue.text = '你好世界'
+}, 3000)
 
 window.lue = lue
 export default lue
